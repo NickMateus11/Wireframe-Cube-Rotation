@@ -1,4 +1,5 @@
 import pygame
+import numpy as np
 
 import shapes
 from shapes import Rect, Prism, Cube
@@ -27,31 +28,55 @@ def main():
 
     s = 200
     cube = Cube((w/2,h/2,0), s)
-    cube.rotate(0, 30, 60)
+    cube.rotate(0, 30, 30)
 
     p = r = y = 0
-    max_rot = 1
+    max_rot = 15
+    rot_step = 0.5
+    damping = 0.95
+    eps = 0.05
 
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    if pygame.key.get_pressed()[pygame.K_RCTRL]:
-                        r += -1
-                    else:
-                        y += -1
-                if event.key == pygame.K_RIGHT:
-                    if pygame.key.get_pressed()[pygame.K_RCTRL]:
-                        r += 1
-                    else:
-                        y += 1
-                if event.key == pygame.K_UP:
-                    p += 1
-                if event.key == pygame.K_DOWN:
-                    p += -1
+
+        keys = pygame.key.get_pressed()
+        mouse_rel = pygame.mouse.get_rel()
+
+        if pygame.mouse.get_pressed()[0]:
+            if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+                if (mouse_rel[0] + mouse_rel[1]) > 0:
+                    r = rot_step * -max(abs(mouse_rel[0]), abs(mouse_rel[1])) * 0.5
+                else:
+                    r = rot_step * max(abs(mouse_rel[0]), abs(mouse_rel[1])) * 0.5
+            else:
+                y = rot_step * -mouse_rel[0] * 0.5
+                p = rot_step * mouse_rel[1] * 0.5
+
+        if keys[pygame.K_LEFT]:
+            if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL] :
+                r += -rot_step
+            else:
+                y += -rot_step
+        if keys[pygame.K_RIGHT]:
+            if keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]:
+                r += rot_step
+            else:
+                y += rot_step
+        if keys[pygame.K_UP]:
+            p += rot_step
+        if keys[pygame.K_DOWN]:
+            p += -rot_step
+
+        p *= damping
+        r *= damping
+        y *= damping
+
+        if abs(p) < eps: p = 0
+        if abs(r) < eps: r = 0
+        if abs(y) < eps: y = 0
 
         if abs(p) > max_rot:
             p = max_rot if p>0 else -max_rot
@@ -62,7 +87,7 @@ def main():
 
         screen.fill(BLACK)
 
-        cube.draw()
+        cube.draw(draw_face=False)
         cube.rotate(p,r,y)
 
         pygame.display.flip()

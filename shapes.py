@@ -1,9 +1,13 @@
+from numpy.lib.function_base import average
 import pygame
 import numpy as np
+
 
 screen = None
 BLACK = pygame.Color("black")
 WHITE = pygame.Color("white")
+GREY = pygame.Color("grey")
+
 
 def init(surface):
     global screen
@@ -17,7 +21,7 @@ class Cube():
             center_pos = center_pos + (0,)
         self.c = np.array(center_pos)
         self.diag = np.sqrt(3*s**2)
-        self.points = [
+        self.points = np.array([
             (self.c + ( self.s/2,  self.s/2,  self.s/2)),
             (self.c + ( self.s/2,  self.s/2, -self.s/2)),
             (self.c + ( self.s/2, -self.s/2, -self.s/2)),
@@ -26,42 +30,69 @@ class Cube():
             (self.c + (-self.s/2,  self.s/2, -self.s/2)),
             (self.c + (-self.s/2, -self.s/2, -self.s/2)),
             (self.c + (-self.s/2, -self.s/2,  self.s/2)),
-        ]
+        ])
 
-    def draw(self):
+    def draw(self, draw_face=False):
         projected_points = [p[:2] for p in self.points]
-        pygame.draw.lines(screen, WHITE, True, projected_points[:4])
-        pygame.draw.lines(screen, WHITE, True, projected_points[4:])
-        pygame.draw.lines(screen, WHITE, True, projected_points[:4:3] + projected_points[4::3][::-1])
-        pygame.draw.lines(screen, WHITE, True, projected_points[1:3] + projected_points[5:7][::-1])
-        for p in projected_points:
-            pygame.draw.circle(screen, WHITE, p, self.s//20)
+        z_avg1 = np.average(self.points[:4][:,2])
+        color1 = ((z_avg1+self.s/2)*225/self.s,)*3
+
+        z_avg2 = np.average(self.points[4:][:,2])
+        color2 = ((z_avg2+self.s/2)*225/self.s,)*3
+        if z_avg1 < 0:
+            if draw_face:
+                pygame.draw.polygon(screen, color1, projected_points[:4])
+            for p in projected_points[:4]:
+                pygame.draw.circle(screen, GREY, p, self.s//20) 
+        if z_avg2 < 0:
+            if draw_face:
+                pygame.draw.polygon(screen, color2, projected_points[4:])
+            for p in projected_points[4:]:
+                pygame.draw.circle(screen, GREY, p, self.s//20)       
+
+        pygame.draw.lines(screen, GREY, True, projected_points[:4])
+        pygame.draw.lines(screen, GREY, True, projected_points[4:])
+        pygame.draw.lines(screen, GREY, True, projected_points[:4:3] + projected_points[4::3][::-1])
+        pygame.draw.lines(screen, GREY, True, projected_points[1:3] + projected_points[5:7][::-1])
+
+        if z_avg1 >= 0:
+            if draw_face:
+                pygame.draw.polygon(screen, color1, projected_points[:4])
+            for p in projected_points[:4]:
+                pygame.draw.circle(screen, GREY, p, self.s//20)
+        if z_avg2 >= 0:
+            if draw_face:
+                pygame.draw.polygon(screen, color2, projected_points[4:])
+            for p in projected_points[4:]:
+                pygame.draw.circle(screen, GREY, p, self.s//20)
+       
+
     
     def rotate(self, pitch=0, roll=0, yaw=0):
         if pitch:
-            theta = np.deg2rad(pitch)
+            theta = np.deg2rad(-pitch)
             r_mat = np.array([
                 [1, 0, 0], 
                 [0, np.cos(theta), -np.sin(theta)],
                 [0, np.sin(theta), np.cos(theta)]
             ])
-            self.points = [self.c - np.matmul(r_mat, (self.c - p).T) for p in self.points]
+            self.points = np.array([self.c - np.matmul(r_mat, (self.c - p).T) for p in self.points])
         if roll:
-            theta = np.deg2rad(roll)
+            theta = np.deg2rad(-roll)
             r_mat = np.array([
                 [np.cos(theta), -np.sin(theta), 0], 
                 [np.sin(theta), np.cos(theta), 0],
                 [0, 0, 1]
             ])
-            self.points = [self.c + np.matmul(r_mat, (self.c - p).T) for p in self.points]
+            self.points = np.array([self.c - np.matmul(r_mat, (self.c - p).T) for p in self.points])
         if yaw:
-            theta = np.deg2rad(yaw)
+            theta = np.deg2rad(-yaw)
             r_mat = np.array([
                 [np.cos(theta), 0, np.sin(theta)], 
                 [0, 1, 0],
                 [-np.sin(theta), 0, np.cos(theta)]
             ])
-            self.points = [self.c + np.matmul(r_mat, (self.c - p).T) for p in self.points]
+            self.points = np.array([self.c - np.matmul(r_mat, (self.c - p).T) for p in self.points])
 
 
 class Prism():
